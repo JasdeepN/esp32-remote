@@ -1,0 +1,7 @@
+// Wi-Fi
+#define SECRET_USER_SETTINGS_SSID  "Deco Mesh"
+#define SECRET_USER_SETTINGS_PASSWORD "Sapphire" 
+
+// MQTT
+#define SECRET_USER_SETTINGS_MQTT_USER_ID "xxxxxx"
+#define SECRET_USER_SETTINGS_MQTT_USER_PASS "xxxxxxxxxxxx"
