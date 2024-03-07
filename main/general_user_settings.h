@@ -1,20 +1,36 @@
-// Description: This file contains the general user settings for the Weather Station project
+/*
+MIT License
 
-//
-// To allow publishing to PWSWeather.com:
-//
-// Press F1 -> ESP-IDF:SDK Configuration editor (menuconfig) -> Component config -> ESP-TLS-> (enable these) "Allow potentially insecure options" and "Skip server certificate verification by default (WARNING ...)" and click 'Save'
-//
+Copyright (c) 2023 Rob Latour
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
 // Sleep approach for reducing power consumption
-#define GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH 1 // set to 0 to use deep sleep
+#define GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH 2 // set to 0 to use deep sleep
                                                              // set to 1 to use automatic light sleep; also EDF-ISP: F1 -> SDK ESP-IDF:SDK Configuration editor (menuconfig) -> Component config -> FreeRTOS -> Tickless Idle (must be checked)
                                                              // set to 2 to use manual light sleep; also EDF-ISP: F1 -> SDK ESP-IDF:SDK Configuration editor (menuconfig) -> Component config -> FreeRTOS -> Tickless Idle (must be unchecked)
                                                              // set to 3 to use a TPL5100 board; also EDF-ISP: F1 -> SDK ESP-IDF:SDK Configuration editor (menuconfig) -> Component config -> FreeRTOS -> Tickless Idle (must be unchecked)
                                                              // for more information, please see: https://github.com/roblatour/WeatherStation
 
 // Reporting frequency - how often reading are taken and published
-#define GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES 15
+#define GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES 1
 
 // MQTT Publishing:
 
@@ -22,7 +38,7 @@
 #define GENERAL_USER_SETTINGS_MQTT_BROKER_PORT 1883
 #define GENERAL_USER_SETTINGS_MQTT_QOS 2
 #define GENERAL_USER_SETTINGS_MQTT_RETAIN 1
-#define GENERAL_USER_SETTINGS_MQTT_TOPIC "Sensor-dump-1"
+#define GENERAL_USER_SETTINGS_MQTT_TOPIC "sensor-dump-1"
 
 // time out period (in seconds) to complete the MQTT publishing
 #define GENERAL_USER_SETTINGS_MQTT_PUBLISHING_TIMEOUT_PERIOD 30 
@@ -39,7 +55,7 @@
 #define GENERAL_USER_SETTINGS_ENABLE_STATIC_IP 1  // 0 = FALSE, 1 = TRUE
 #define GENERAL_USER_SETTINGS_STATIC_IP_ADDR "172.0.11.1"
 #define GENERAL_USER_SETTINGS_STATIC_IP_NETMASK_ADDR "255, 255, 0, 0"
-#define GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR "172.0.10.1"
+#define GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR "172.0.1.1"
 
 // Wi-Fi:
 

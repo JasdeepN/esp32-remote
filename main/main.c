@@ -1,17 +1,14 @@
-// alt shift f to tidy up code
+// using modified code from:
+   // Copyright Rob Latour, 2023
+   // License MIT
+   // open source project: https://github.com/roblatour/WeatherStation
 
-// (Wi-Fi 6) Weather Station
-
-// Copyright Rob Latour, 2023
-// License MIT
-// open source project: https://github.com/roblatour/WeatherStation
-
-// Running on an esp32-c6 for Wifi 6 (802.11ax) using either:
-//  - deep sleep, or
-//  - automatic light sleep with WiFi 6
-//  to reduce power consumption.
-//
-// For more information please see the general_user_settings.h file
+   // Running on an esp32-c6 for Wifi 6 (802.11ax) using either:
+   //  - deep sleep, or
+   //  - automatic light sleep with WiFi 6
+   //  to reduce power consumption.
+   //
+   // For more information please see the general_user_settings.h file
 
 #include "sdkconfig.h"
 #include "general_user_settings.h"
@@ -72,8 +69,10 @@ static void startup(void);
 static void startup_validations_and_displays();
 static void initalize_non_volatile_storage();
 static void initialize_power_management();
-static void initialize_the_external_switch();
 static void connect_to_WiFi();
+
+static void test(void);
+static void send_mqtt(void);
 
 static const char* TAG = "MyModule";
 
@@ -81,11 +80,13 @@ struct colour {
    int red;
    int green;
    int blue;
-} status[5] = {
-   { 255, 255, 0   }, // yellow
-   { 0,   255, 0   }, // GREEN 
-   { 255, 0,   0   }, // RED 
-   { 0,   0,   0   }, // off
+} status[7] = {
+   { 255, 255, 0   }, // yellow 0
+   { 0,   255, 0   }, // GREEN  1
+   { 255, 0,   0   }, // RED    2
+   { 128, 0,   128 }, // purple 3
+   { 0,   0,   255 }, // blue   4
+   { 0,   0,   0   }, // off    5
    { 128, 128, 128 }, // white 50% power
 };
 
@@ -145,7 +146,7 @@ void startup(void){
 
    initialize_power_management();
 
-   initialize_the_external_switch();
+   // initialize_the_external_switch();
 
    connect_to_WiFi();
    ESP_LOGI("Startup", "Complete");
@@ -164,8 +165,8 @@ void startup(void){
 #define POWER_OFF 0
 
 // WIFI
-#define ITWT_TRIGGER_ENABLED 0 // 0 = FALSE, 1 = TRUE
-#define ITWT_ANNOUNCED 0       // 0 = FALSE, 1 = TRUE
+#define ITWT_TRIGGER_ENABLED 1 // 0 = FALSE, 1 = TRUE
+#define ITWT_ANNOUNCED 1       // 0 = FALSE, 1 = TRUE
 #define ITWT_MIN_WAKE_DURATION 255
 
 #define WIFI_LISTEN_INTERVAL 100
@@ -198,9 +199,6 @@ volatile bool light_sleep_enabled = false;
 volatile int MQTT_published_messages;
 volatile bool MQTT_publishing_in_progress;
 volatile bool MQTT_unknown_error = false;
-
-volatile bool PWSWeather_Publishing_Done;
-volatile bool PWSWeather_unknown_error = false;
 
 volatile bool going_to_sleep = false;
 
@@ -763,9 +761,6 @@ static void WiFi6_itwt_probe_handler(void *arg, esp_event_base_t event_base, int
     ESP_LOGI("WIFI", "<WIFI_EVENT_ITWT_PROBE>status:%s, reason:0x%x", itwt_probe_status_to_str(probe->status), probe->reason);
 }
 
-/*
-
-not currently in use
 
 static void set_static_ip(esp_netif_t *netif)
 {
@@ -789,7 +784,7 @@ static void set_static_ip(esp_netif_t *netif)
              GENERAL_USER_SETTINGS_STATIC_IP_ADDR, GENERAL_USER_SETTINGS_STATIC_IP_NETMASK_ADDR, GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR);
 #endif
 }
-*/
+
 
 static void start_wifi()
 {
@@ -847,7 +842,7 @@ static void start_wifi()
     // esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
     // esp_wifi_set_ps(WIFI_PS_NONE);
 
-    // set_static_ip(netif_sta); // helpful if publishing to mqtt only; if publishing to pwsweather then comment this line // additional code for this is commented out above
+    set_static_ip(netif_sta); // helpful if publishing to mqtt only; if publishing to pwsweather then comment this line // additional code for this is commented out above
 
     ESP_ERROR_CHECK(esp_wifi_start());
 
@@ -883,7 +878,7 @@ void turn_on_Wifi()
 
 void goto_sleep()
 {
-
+   set_led(0, 0.10);
     // GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH values:
     // 0 to use deep sleep
     // 1 to use automatic light sleep; also EDF-ISP: F1 -> SDK Configuration -> Component config -> FreeRTOS -> Tickless Idle (must be checked)
@@ -932,7 +927,7 @@ void goto_sleep()
 
     // if we have had a relatively serious problem force deep sleep rather than light sleep
     // this will effectively reset the esp32
-    if (!WiFi_is_connected || !BME680_readings_are_reasonable || MQTT_unknown_error || PWSWeather_unknown_error)
+    if (!WiFi_is_connected || !BME680_readings_are_reasonable || MQTT_unknown_error )
         light_sleep_enabled = false;
 
     // report processing time for this cycle (processing time excludes sleep time)
@@ -1044,19 +1039,19 @@ void initalize_non_volatile_storage()
     ESP_ERROR_CHECK(ret);
 }
 
-void initialize_the_external_switch()
-{
-    // Initialize the external switch used to determine if the readings should be reported to PWSWeather.com
+// void initialize_the_external_switch()
+// {
+//     // Initialize the external switch used to determine if the readings should be reported to PWSWeather.com
 
-    gpio_config_t io_conf;
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = 1ULL << GENERAL_USER_SETTINGS_EXTERNAL_SWITCH_GPIO_PIN;
-    // io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-    gpio_config(&io_conf);
-}
+//     gpio_config_t io_conf;
+//     io_conf.intr_type = GPIO_INTR_DISABLE;
+//     io_conf.mode = GPIO_MODE_INPUT;
+//     io_conf.pin_bit_mask = 1ULL << GENERAL_USER_SETTINGS_EXTERNAL_SWITCH_GPIO_PIN;
+//     // io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+//     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+//     io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+//     gpio_config(&io_conf);
+// }
 
 void restart_after_this_many_seconds(int seconds)
 {
@@ -1070,7 +1065,7 @@ void restart_after_this_many_seconds(int seconds)
 void startup_validations_and_displays()
 {
 
-    ESP_LOGI("STARTUP", "\n\n\n************************\n* Weather Station v1.1 *\n************************");
+    ESP_LOGI("STARTUP", "\n\n\n************************\n* Remote Station *\n************************");
 
 #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
     bool tickless_idle_enabled = true;
@@ -1120,7 +1115,8 @@ void startup_validations_and_displays()
 
 void connect_to_WiFi()
 {
-
+    set_led(5, 0.33);
+    
     // Check if Wi-Fi is already connected
 
     wifi_ap_record_t ap_info;
@@ -1145,11 +1141,109 @@ void connect_to_WiFi()
 
     if (!WiFi_is_connected)
     {
+        set_led(3, 0.33);
         ESP_LOGE("WIFI", "Could not connect to WIFI within the timeout period.");
         restart_after_this_many_seconds(GENERAL_USER_SETTINGS_DEEP_SLEEP_PERIOD_WHEN_WIFI_CANNOT_CONNECT);
     };
 }
 
+
+void test()
+{
+   set_led(4, 0.33);
+    const esp_mqtt_client_config_t mqtt_cfg = {
+        .broker.address.uri = GENERAL_USER_SETTINGS_MQTT_BROKER_URL,
+        .broker.address.port = GENERAL_USER_SETTINGS_MQTT_BROKER_PORT,
+        .credentials.username = SECRET_USER_SETTINGS_MQTT_USER_ID,
+        .credentials.authentication.password = SECRET_USER_SETTINGS_MQTT_USER_PASS,
+        //.session.disable_keepalive = true,    // this fails on my network; it may work on yours?
+        .session.keepalive = INT_MAX, // using this instead of the above
+        .network.disable_auto_reconnect = true,
+        .network.refresh_connection_after_ms = (GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES + 1) * 60 * 1000,
+    };
+
+    MQTT_is_connected = false;
+    MQTT_unknown_error = false;
+    MQTT_publishing_in_progress = true;
+
+    int64_t timeout = esp_timer_get_time() + GENERAL_USER_SETTINGS_MQTT_PUBLISHING_TIMEOUT_PERIOD * 1000000;
+
+    // multiple attempts to connect to MQTT will be made incase the network connection has failed within the reporting period and needs to be re-established
+
+    int attempts = 0;
+    const int max_attempts = 3;
+
+    while (!MQTT_is_connected && (attempts++ < max_attempts) && MQTT_publishing_in_progress)
+    {
+        if (esp_timer_get_time() < timeout)
+        {
+            ESP_LOGI("MQTT", "Attempting to connect to MQTT (attempt %d of %d)", attempts, max_attempts);
+
+            MQTT_unknown_error = false;
+
+            if (esp_timer_get_time() < timeout)
+            {
+                MQTT_client = esp_mqtt_client_init(&mqtt_cfg);
+                esp_mqtt_client_register_event(MQTT_client, ESP_EVENT_ANY_ID, mqtt_event_handler, MQTT_client);
+                ESP_LOGI("MQTT", "Starting MQTT client");
+                esp_mqtt_client_start(MQTT_client);
+
+                while ((!MQTT_is_connected) && (!MQTT_unknown_error) && (esp_timer_get_time() < timeout))
+                    vTaskDelay(20 / portTICK_PERIOD_MS);
+            }
+
+            // wait for WiFi to connect (in case it has dropped out)
+            while ((!WiFi_is_connected) && (esp_timer_get_time() < timeout))
+                vTaskDelay(20 / portTICK_PERIOD_MS);
+
+            if (MQTT_is_connected)
+            {
+
+                if (MQTT_publishing_in_progress)
+                    send_mqtt();
+
+                while (MQTT_publishing_in_progress && (!MQTT_unknown_error) && (esp_timer_get_time() < timeout))
+                    vTaskDelay(20 / portTICK_PERIOD_MS);
+
+                set_led(4, 0.33);
+                esp_mqtt_client_destroy(MQTT_client);
+                vTaskDelay(40 / portTICK_PERIOD_MS);
+            }
+            else
+            {
+               
+
+                esp_mqtt_client_unregister_event(MQTT_client, ESP_EVENT_ANY_ID, mqtt_event_handler);
+                ESP_LOGI("MQTT", "MQTT failed to connected (attempt %d of %d)", attempts, max_attempts);
+
+                if (attempts == max_attempts)
+                    ESP_LOGE("MQTT", "Reached the MQTT connection attempt threshold");
+                else
+                {
+                    vTaskDelay(20 / portTICK_PERIOD_MS);
+                };
+
+                MQTT_unknown_error = true;
+            };
+
+            if (esp_timer_get_time() >= timeout)
+                ESP_LOGE("MQTT", "Timed out trying to connect to MQTT");
+        };
+    };
+}
+static void send_mqtt()
+{
+    static char topic[100];
+    strcpy(topic, "test");
+    strcat(topic, "/");
+    strcat(topic, "1");
+
+    static char payload[20];
+    sprintf(payload, "%s", "hi from ESP32 C6!");
+
+    ESP_LOGI("MQTT", "publish: %s %s", topic, payload);
+    esp_mqtt_client_publish(MQTT_client, topic, payload, 0, GENERAL_USER_SETTINGS_MQTT_QOS, GENERAL_USER_SETTINGS_MQTT_RETAIN);
+}
 
 void app_main(void)
 {
@@ -1163,7 +1257,7 @@ void app_main(void)
    //  }
 
 
- 
+      test();
 
    //  while (true)
    //  {
