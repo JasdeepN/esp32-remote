@@ -139,7 +139,9 @@ static void set_led(int i, double intensity)
 
 void startup(void){
    configure_led();
-   set_led(0, 0.33);
+
+   set_led(0, INTENSITY);
+
    startup_validations_and_displays();
 
    initalize_non_volatile_storage();
@@ -150,7 +152,7 @@ void startup(void){
 
    connect_to_WiFi();
    ESP_LOGI("Startup", "Complete");
-   set_led(1, 0.33);
+   set_led(1, INTENSITY);
 
 };
 
@@ -878,7 +880,7 @@ void turn_on_Wifi()
 
 void goto_sleep()
 {
-   set_led(0, 0.10);
+   set_led(0, INTENSITY);
     // GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH values:
     // 0 to use deep sleep
     // 1 to use automatic light sleep; also EDF-ISP: F1 -> SDK Configuration -> Component config -> FreeRTOS -> Tickless Idle (must be checked)
@@ -1115,7 +1117,7 @@ void startup_validations_and_displays()
 
 void connect_to_WiFi()
 {
-    set_led(5, 0.33);
+    set_led(5, INTENSITY);
     
     // Check if Wi-Fi is already connected
 
@@ -1141,7 +1143,7 @@ void connect_to_WiFi()
 
     if (!WiFi_is_connected)
     {
-        set_led(3, 0.33);
+        set_led(3, INTENSITY);
         ESP_LOGE("WIFI", "Could not connect to WIFI within the timeout period.");
         restart_after_this_many_seconds(GENERAL_USER_SETTINGS_DEEP_SLEEP_PERIOD_WHEN_WIFI_CANNOT_CONNECT);
     };
@@ -1150,7 +1152,7 @@ void connect_to_WiFi()
 
 void test()
 {
-   set_led(4, 0.33);
+   set_led(4, INTENSITY);
     const esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = GENERAL_USER_SETTINGS_MQTT_BROKER_URL,
         .broker.address.port = GENERAL_USER_SETTINGS_MQTT_BROKER_PORT,
@@ -1205,7 +1207,7 @@ void test()
                 while (MQTT_publishing_in_progress && (!MQTT_unknown_error) && (esp_timer_get_time() < timeout))
                     vTaskDelay(20 / portTICK_PERIOD_MS);
 
-                set_led(4, 0.33);
+              
                 esp_mqtt_client_destroy(MQTT_client);
                 vTaskDelay(40 / portTICK_PERIOD_MS);
             }
