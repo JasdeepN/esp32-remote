@@ -326,7 +326,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         // ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
 
         MQTT_published_messages++;
-        if (MQTT_published_messages >= 3)
+        if (MQTT_published_messages >= 1) // change if theres more then 1 msg
         {
             ESP_LOGI("MQTT", "MQTT publishing complete");
             MQTT_publishing_in_progress = false;
