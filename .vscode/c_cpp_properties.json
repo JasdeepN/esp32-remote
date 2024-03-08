@@ -3,7 +3,6 @@
         {
             "name": "ESP-IDF",
             "compilerPath": "${config:idf.toolsPathWin}\\tools\\riscv32-esp-elf\\esp-12.2.0_20230208\\riscv32-esp-elf\\bin\\riscv32-esp-elf-gcc.exe",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
             "includePath": [
                 "${config:idf.espIdfPath}/components/**",
                 "${config:idf.espIdfPathWin}/components/**",
