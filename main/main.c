@@ -138,6 +138,8 @@ static void set_led(int i, double intensity)
 }
 
 void startup(void){
+   ++boot_count;
+   ESP_LOGI(TAG, "Boot count: %d", boot_count);
    configure_led();
 
    set_led(0, INTENSITY);
