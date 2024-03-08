@@ -764,28 +764,28 @@ static void WiFi6_itwt_probe_handler(void *arg, esp_event_base_t event_base, int
 }
 
 
-static void set_static_ip(esp_netif_t *netif)
-{
-#if GENERAL_USER_SETTINGS_ENABLE_STATIC_IP
-    if (esp_netif_dhcpc_stop(netif) != ESP_OK)
-    {
-        ESP_LOGE("WIFI", "Failed to stop dhcp client");
-        return;
-    }
-    esp_netif_ip_info_t ip;
-    memset(&ip, 0, sizeof(esp_netif_ip_info_t));
-    ip.ip.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_ADDR);
-    ip.netmask.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_NETMASK_ADDR);
-    ip.gw.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR);
-    if (esp_netif_set_ip_info(netif, &ip) != ESP_OK)
-    {
-        ESP_LOGE("WIFI", "Failed to set ip info");
-        return;
-    }
-    ESP_LOGI("WIFI", "Success setting static ip: %s, netmask: %s, gw: %s",
-             GENERAL_USER_SETTINGS_STATIC_IP_ADDR, GENERAL_USER_SETTINGS_STATIC_IP_NETMASK_ADDR, GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR);
-#endif
-}
+// static void set_static_ip(esp_netif_t *netif)
+// {
+// #if GENERAL_USER_SETTINGS_ENABLE_STATIC_IP
+//     if (esp_netif_dhcpc_stop(netif) != ESP_OK)
+//     {
+//         ESP_LOGE("WIFI", "Failed to stop dhcp client");
+//         return;
+//     }
+//     esp_netif_ip_info_t ip;
+//     memset(&ip, 0, sizeof(esp_netif_ip_info_t));
+//     ip.ip.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_ADDR);
+//     ip.netmask.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_NETMASK_ADDR);
+//     ip.gw.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR);
+//     if (esp_netif_set_ip_info(netif, &ip) != ESP_OK)
+//     {
+//         ESP_LOGE("WIFI", "Failed to set ip info");
+//         return;
+//     }
+//     ESP_LOGI("WIFI", "Success setting static ip: %s, netmask: %s, gw: %s",
+//              GENERAL_USER_SETTINGS_STATIC_IP_ADDR, GENERAL_USER_SETTINGS_STATIC_IP_NETMASK_ADDR, GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR);
+// #endif
+// }
 
 
 static void start_wifi()
@@ -844,7 +844,7 @@ static void start_wifi()
     // esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
     // esp_wifi_set_ps(WIFI_PS_NONE);
 
-    set_static_ip(netif_sta); // helpful if publishing to mqtt only; if publishing to pwsweather then comment this line // additional code for this is commented out above
+   //  set_static_ip(netif_sta); // helpful if publishing to mqtt only; if publishing to pwsweather then comment this line // additional code for this is commented out above
 
     ESP_ERROR_CHECK(esp_wifi_start());
 
