@@ -4,4 +4,4 @@ sdkconfig.old
 
 
 **/secret_user_settings.h
-Kconfig.projbuild
+**/Kconfig.projbuild

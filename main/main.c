@@ -19,7 +19,7 @@ static void initialize_power_management()
 
     // power management is only needed when the program will use automatic light sleep
 
-    if (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 1)
+    if (USE_AUTOMATIC_SLEEP_APPROACH == 1)
     {
 
         // get the current power management configuration and save it as a baseline for when power save mode is disabled
@@ -91,13 +91,13 @@ void startup(void){
 //     // one time setup for the BME680 sensor power pin
 //     if (doOnce)
 //     {
-//         esp_rom_gpio_pad_select_gpio(GENERAL_USER_SETTINGS_POWER_SENSOR_CONTROLLER_PIN);
-//         gpio_reset_pin(GENERAL_USER_SETTINGS_POWER_SENSOR_CONTROLLER_PIN);
-//         gpio_set_direction(GENERAL_USER_SETTINGS_POWER_SENSOR_CONTROLLER_PIN, GPIO_MODE_OUTPUT);
+//         esp_rom_gpio_pad_select_gpio(POWER_SENSOR_CONTROLLER_PIN);
+//         gpio_reset_pin(POWER_SENSOR_CONTROLLER_PIN);
+//         gpio_set_direction(POWER_SENSOR_CONTROLLER_PIN, GPIO_MODE_OUTPUT);
 //         doOnce = false;
 //     };
 
-//     gpio_set_level(GENERAL_USER_SETTINGS_POWER_SENSOR_CONTROLLER_PIN, POWER_ON);
+//     gpio_set_level(POWER_SENSOR_CONTROLLER_PIN, POWER_ON);
 //     ESP_LOGI("BME680", "BME680 powered on");
 
 //     // wait for the sensor to fully power up
@@ -109,7 +109,7 @@ void startup(void){
 //     ESP_ERROR_CHECK(i2cdev_init());
 
 //     memset(&sensor, 0, sizeof(bme680_t));
-//     ESP_ERROR_CHECK(bme680_init_desc(&sensor, GENERAL_USER_SETTINGS_BME680_I2C_ADDR, GENERAL_USER_SETTINGS_PORT, GENERAL_USER_SETTINGS_I2C_SDA, GENERAL_USER_SETTINGS_I2C_SCL));
+//     ESP_ERROR_CHECK(bme680_init_desc(&sensor, BME680_I2C_ADDR, PORT, I2C_SDA, I2C_SCL));
 //     // wait for the sensor to power up
 
 //     ESP_ERROR_CHECK(bme680_init_sensor(&sensor));
@@ -181,7 +181,7 @@ void startup(void){
 //     };
 
 //     // power down the BME680 sensor
-//     gpio_set_level(GENERAL_USER_SETTINGS_POWER_SENSOR_CONTROLLER_PIN, POWER_OFF);
+//     gpio_set_level(POWER_SENSOR_CONTROLLER_PIN, POWER_OFF);
 //     ESP_LOGI("BME680", "BME680 powered off");
 
 //     // release the I2C bus
@@ -212,7 +212,7 @@ void initalize_non_volatile_storage()
 //     gpio_config_t io_conf;
 //     io_conf.intr_type = GPIO_INTR_DISABLE;
 //     io_conf.mode = GPIO_MODE_INPUT;
-//     io_conf.pin_bit_mask = 1ULL << GENERAL_USER_SETTINGS_EXTERNAL_SWITCH_GPIO_PIN;
+//     io_conf.pin_bit_mask = 1ULL << EXTERNAL_SWITCH_GPIO_PIN;
 //     // io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
 //     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
 //     io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
@@ -232,44 +232,44 @@ void startup_validations_and_displays()
     bool tickless_idle_enabled = false;
 #endif
 
-    if (GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES <= 0)
+    if (REPORTING_FREQUENCY_IN_MINUTES <= 0)
     {
         ESP_LOGE("INFO", "invalid reporting frequency");
         restart_after_this_many_seconds(120);
     };
 
-    if ((GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH < 0) || (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH > 3))
+    if ((USE_AUTOMATIC_SLEEP_APPROACH < 0) || (USE_AUTOMATIC_SLEEP_APPROACH > 3))
     {
         ESP_LOGE("INFO", "invalid sleep approach");
         restart_after_this_many_seconds(120);
     };
 
-    if ((GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 1) && !tickless_idle_enabled)
+    if ((USE_AUTOMATIC_SLEEP_APPROACH == 1) && !tickless_idle_enabled)
     {
         ESP_LOGE("INFO", "automatic light sleep requires tickless idle to be enabled");
         restart_after_this_many_seconds(120);
     }
 
-    if ((GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 2) && tickless_idle_enabled)
+    if ((USE_AUTOMATIC_SLEEP_APPROACH == 2) && tickless_idle_enabled)
     {
         ESP_LOGE("INFO", "manual light sleep requires tickless idle to be disabled");
         restart_after_this_many_seconds(120);
     };
 
-    if ((GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 3) && tickless_idle_enabled)
+    if ((USE_AUTOMATIC_SLEEP_APPROACH == 3) && tickless_idle_enabled)
     {
         ESP_LOGE("INFO", "TPL5100 sleep requires tickless idle to be disabled");
         restart_after_this_many_seconds(120);
     };
 
-    if (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 0)
+    if (USE_AUTOMATIC_SLEEP_APPROACH == 0)
         ESP_LOGI("INFO", "sleep approach: deep sleep");
-    else if (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 1)
+    else if (USE_AUTOMATIC_SLEEP_APPROACH == 1)
         ESP_LOGI("INFO", "sleep approach: automatic light sleep");
-    else if (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 2)
+    else if (USE_AUTOMATIC_SLEEP_APPROACH == 2)
         ESP_LOGI("INFO", "sleep approach: manual light sleep");
 
-    ESP_LOGI("INFO", "sleep time between cycles: %d seconds", GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60);
+    ESP_LOGI("INFO", "sleep time between cycles: %d seconds", REPORTING_FREQUENCY_IN_MINUTES * 60);
 }
 
 
@@ -277,21 +277,21 @@ void test()
 {
    set_led(purple);
     const esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = GENERAL_USER_SETTINGS_MQTT_BROKER_URL,
-        .broker.address.port = GENERAL_USER_SETTINGS_MQTT_BROKER_PORT,
-        .credentials.username = SECRET_USER_SETTINGS_MQTT_USER_ID,
-        .credentials.authentication.password = SECRET_USER_SETTINGS_MQTT_USER_PASS,
+        .broker.address.uri = MQTT_BROKER_URL,
+        .broker.address.port = MQTT_BROKER_PORT,
+        .credentials.username = MQTT_USER,
+        .credentials.authentication.password = MQTT_PASS,
         //.session.disable_keepalive = true,    // this fails on my network; it may work on yours?
         .session.keepalive = INT_MAX, // using this instead of the above
         .network.disable_auto_reconnect = true,
-        .network.refresh_connection_after_ms = (GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES + 1) * 60 * 1000,
+        .network.refresh_connection_after_ms = (REPORTING_FREQUENCY_IN_MINUTES + 1) * 60 * 1000,
     };
 
     MQTT_is_connected = false;
     MQTT_unknown_error = false;
     MQTT_publishing_in_progress = true;
 
-    int64_t timeout = esp_timer_get_time() + GENERAL_USER_SETTINGS_MQTT_PUBLISHING_TIMEOUT_PERIOD * 1000000;
+    int64_t timeout = esp_timer_get_time() + MQTT_PUBLISHING_TIMEOUT_PERIOD * 1000000;
 
     // multiple attempts to connect to MQTT will be made incase the network connection has failed within the reporting period and needs to be re-established
 

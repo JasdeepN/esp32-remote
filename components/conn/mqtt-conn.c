@@ -4,7 +4,7 @@ void MQTT_publish_a_reading(const char *subtopic, float value)
 {
 
     static char topic[100];
-    strcpy(topic, GENERAL_USER_SETTINGS_MQTT_TOPIC);
+    strcpy(topic, MQTT_MAIN_TOPIC);
     strcat(topic, "/");
     strcat(topic, subtopic);
 
@@ -12,7 +12,7 @@ void MQTT_publish_a_reading(const char *subtopic, float value)
     sprintf(payload, "%g", value);
 
     ESP_LOGI("MQTT", "publish: %s %s", topic, payload);
-    esp_mqtt_client_publish(MQTT_client, topic, payload, 0, GENERAL_USER_SETTINGS_MQTT_QOS, GENERAL_USER_SETTINGS_MQTT_RETAIN);
+    esp_mqtt_client_publish(MQTT_client, topic, payload, 0, MQTT_QOS, MQTT_RETAIN);
 };
 
 void MQTT_publish_all_readings()
@@ -85,21 +85,21 @@ void publish_readings_via_MQTT()
 {
 
     const esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = GENERAL_USER_SETTINGS_MQTT_BROKER_URL,
-        .broker.address.port = GENERAL_USER_SETTINGS_MQTT_BROKER_PORT,
-        .credentials.username = SECRET_USER_SETTINGS_MQTT_USER_ID,
-        .credentials.authentication.password = SECRET_USER_SETTINGS_MQTT_USER_PASS,
+        .broker.address.uri = MQTT_BROKER_URL,
+        .broker.address.port = MQTT_BROKER_PORT,
+        .credentials.username = MQTT_USER,
+        .credentials.authentication.password = MQTT_PASS,
         //.session.disable_keepalive = true,    // this fails on my network; it may work on yours?
         .session.keepalive = INT_MAX, // using this instead of the above
         .network.disable_auto_reconnect = true,
-        .network.refresh_connection_after_ms = (GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES + 1) * 60 * 1000,
+        .network.refresh_connection_after_ms = (REPORTING_FREQUENCY_IN_MINUTES + 1) * 60 * 1000,
     };
 
     MQTT_is_connected = false;
     MQTT_unknown_error = false;
     MQTT_publishing_in_progress = true;
 
-    int64_t timeout = esp_timer_get_time() + GENERAL_USER_SETTINGS_MQTT_PUBLISHING_TIMEOUT_PERIOD * 1000000;
+    int64_t timeout = esp_timer_get_time() + MQTT_PUBLISHING_TIMEOUT_PERIOD * 1000000;
 
     // multiple attempts to connect to MQTT will be made incase the network connection has failed within the reporting period and needs to be re-established
 
@@ -174,6 +174,6 @@ void send_mqtt()
     sprintf(payload, "%s at time %s", "hi from ESP32 C6!", get_time());
 
     ESP_LOGI("MQTT", "publish: %s %s", topic, payload);
-    esp_mqtt_client_publish(MQTT_client, topic, payload, 0, GENERAL_USER_SETTINGS_MQTT_QOS, GENERAL_USER_SETTINGS_MQTT_RETAIN);
+    esp_mqtt_client_publish(MQTT_client, topic, payload, 0, MQTT_QOS, MQTT_RETAIN);
     
 }

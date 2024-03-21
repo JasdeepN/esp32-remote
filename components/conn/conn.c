@@ -91,7 +91,7 @@ esp_err_t http_event_handler(esp_http_client_event_t *evt)
 static void WiFi_start_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     ESP_LOGI("WIFI", "Wi-Fi started");
-    ESP_LOGI("WIFI", "Connecting to %s", SECRET_USER_SETTINGS_SSID);
+    ESP_LOGI("WIFI", "Connecting to %s", WIFI_SSID);
     ESP_ERROR_CHECK(esp_wifi_connect());
 }
 
@@ -155,8 +155,8 @@ static void setup_WIFI6_targeted_wake_time()
                 .twt_id = 0,
                 .flow_type = flow_type_announced ? 0 : 1,
                 .min_wake_dura = ITWT_MIN_WAKE_DURATION,
-                .wake_invl_expn = GENERAL_USER_SETTINGS_ITWT_WAKE_INVL_EXPN,
-                .wake_invl_mant = GENERAL_USER_SETTINGS_ITWT_WAKE_INVL_MANT,
+                .wake_invl_expn = ITWT_WAKE_INVL_EXPN,
+                .wake_invl_mant = ITWT_WAKE_INVL_MANT,
                 .trigger = ITWT_TRIGGER_ENABLED,
                 .timeout_time_ms = twt_timeout,
             };
@@ -216,7 +216,7 @@ static void got_ip_handler(void *arg, esp_event_base_t event_base, int32_t event
     xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
 
     // don't setup Wi-Fi 6 targeted wake time if we're going to use deep sleep
-    if (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH > 0)
+    if (USE_AUTOMATIC_SLEEP_APPROACH > 0)
         setup_WIFI6_targeted_wake_time();
 
     WiFi_is_connected = true;
@@ -268,7 +268,7 @@ static void WiFi6_itwt_probe_handler(void *arg, esp_event_base_t event_base, int
 
 // static void set_static_ip(esp_netif_t *netif)
 // {
-// #if GENERAL_USER_SETTINGS_ENABLE_STATIC_IP
+// #if ENABLE_STATIC_IP
 //     if (esp_netif_dhcpc_stop(netif) != ESP_OK)
 //     {
 //         ESP_LOGE("WIFI", "Failed to stop dhcp client");
@@ -276,16 +276,16 @@ static void WiFi6_itwt_probe_handler(void *arg, esp_event_base_t event_base, int
 //     }
 //     esp_netif_ip_info_t ip;
 //     memset(&ip, 0, sizeof(esp_netif_ip_info_t));
-//     ip.ip.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_ADDR);
-//     ip.netmask.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_NETMASK_ADDR);
-//     ip.gw.addr = ipaddr_addr(GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR);
+//     ip.ip.addr = ipaddr_addr(STATIC_IP_ADDR);
+//     ip.netmask.addr = ipaddr_addr(STATIC_IP_NETMASK_ADDR);
+//     ip.gw.addr = ipaddr_addr(STATIC_IP_GW_ADDR);
 //     if (esp_netif_set_ip_info(netif, &ip) != ESP_OK)
 //     {
 //         ESP_LOGE("WIFI", "Failed to set ip info");
 //         return;
 //     }
 //     ESP_LOGI("WIFI", "Success setting static ip: %s, netmask: %s, gw: %s",
-//              GENERAL_USER_SETTINGS_STATIC_IP_ADDR, GENERAL_USER_SETTINGS_STATIC_IP_NETMASK_ADDR, GENERAL_USER_SETTINGS_STATIC_IP_GW_ADDR);
+//              STATIC_IP_ADDR, STATIC_IP_NETMASK_ADDR, STATIC_IP_GW_ADDR);
 // #endif
 // }
 
@@ -320,7 +320,7 @@ void connect_to_WiFi()
 
     // wait for Wi-Fi to connect / reconnect
 
-    int64_t timeout = esp_timer_get_time() + GENERAL_USER_SETTINGS_WIFI_CONNECT_TIMEOUT_PERIOD * 1000000;
+    int64_t timeout = esp_timer_get_time() + WIFI_CONNECT_TIMEOUT_PERIOD * 1000000;
     while ((!WiFi_is_connected) && (esp_timer_get_time() < timeout))
         vTaskDelay(20 / portTICK_PERIOD_MS);
 
@@ -328,7 +328,7 @@ void connect_to_WiFi()
     {
         set_led(purple);
         ESP_LOGE("WIFI", "Could not connect to WIFI within the timeout period.");
-        restart_after_this_many_seconds(GENERAL_USER_SETTINGS_DEEP_SLEEP_PERIOD_WHEN_WIFI_CANNOT_CONNECT);
+        restart_after_this_many_seconds(DEEP_SLEEP_PERIOD_WHEN_WIFI_CANNOT_CONNECT);
     };
 }
 
@@ -366,8 +366,8 @@ static void start_wifi()
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = SECRET_USER_SETTINGS_SSID,
-            .password = SECRET_USER_SETTINGS_PASSWORD,
+            .ssid = WIFI_SSID,
+            .password = WIFI_PASS,
             .listen_interval = WIFI_LISTEN_INTERVAL,
             .pmf_cfg = {
                 .capable = true,
@@ -382,7 +382,7 @@ static void start_wifi()
 
     esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_11AX);
 
-    esp_wifi_set_country_code(GENERAL_USER_SETTINGS_WIFI_COUNTRY_CODE, true);
+    esp_wifi_set_country_code(WIFI_COUNTRY_CODE, true);
 
     esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
     // esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
@@ -425,51 +425,17 @@ void turn_on_Wifi()
 void goto_sleep()
 {
    set_led(yellow);
-    // GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH values:
+    // USE_AUTOMATIC_SLEEP_APPROACH values:
     // 0 to use deep sleep
     // 1 to use automatic light sleep; also EDF-ISP: F1 -> SDK Configuration -> Component config -> FreeRTOS -> Tickless Idle (must be checked)
     // 2 to use manual light sleep; also EDF-ISP: F1 -> SDK Configuration -> Component config -> FreeRTOS -> Tickless Idle (must be unchecked)
-    // 3 to use a TPL5100 board; also EDF-ISP: F1 -> SDK Configuration -> Component config -> FreeRTOS -> Tickless Idle (must be unchecked)
 
     static int cycle = 1;
     int64_t cycle_time;
     int64_t sleep_time;
     cycle_time = esp_timer_get_time() - cycle_start_time;
 
-    // TPL5100 sleep approach
-    if (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 3)
-    {
-        ignore_disconnect_event = true;
-        esp_wifi_stop();
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-
-        // report processing time for this cycle
-        cycle_time = esp_timer_get_time();
-        ESP_LOGW("PERF", "processing time: %f seconds", (float)((float)cycle_time / (float)1000000));
-
-        ESP_LOGI("PERF", "triggering TPL5100 shutdown request");
-
-        gpio_reset_pin(GENERAL_USER_SETTINGS_TPL5100_DONE_GPIO_PIN);
-        gpio_set_direction(GENERAL_USER_SETTINGS_TPL5100_DONE_GPIO_PIN, GPIO_MODE_OUTPUT);
-
-        gpio_set_level(GENERAL_USER_SETTINGS_TPL5100_DONE_GPIO_PIN, LOW);
-        gpio_set_level(GENERAL_USER_SETTINGS_TPL5100_DONE_GPIO_PIN, HIGH);
-
-        vTaskDelay(2000 / portTICK_PERIOD_MS); // power should turn off right away
-
-        ESP_LOGE("PERF", "You should only see this if a TPL5100 board is not connected");
-
-        //while (true)
-        //    vTaskDelay(10 / portTICK_PERIOD_MS);
-
-        // by now the power should be off
-        // if it does not go off as expected then the code below will act as a fail safe
-        ESP_LOGW("PERF", "Going into deep sleep as a fail safe");
-        vTaskDelay(20 / portTICK_PERIOD_MS);
-        sleep_time = ((GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000) - cycle_time;
-        esp_sleep_enable_timer_wakeup(sleep_time);
-        esp_deep_sleep_start();
-    };
+    
 
     // if we have had a relatively serious problem force deep sleep rather than light sleep
     // this will effectively reset the esp32
@@ -485,14 +451,14 @@ void goto_sleep()
     else
         ESP_LOGW("PERF", "cycle %d processing time: %f seconds", cycle++, (float)((float)cycle_time / (float)1000000));
 
-    if (light_sleep_enabled && (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 1))
+    if (light_sleep_enabled && (USE_AUTOMATIC_SLEEP_APPROACH == 1))
     // automatic light sleep approach
     {
 
-        if (cycle_time < ((GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000))
+        if (cycle_time < ((REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000))
         {
 
-            ESP_LOGI("PERF", "begin automatic light sleep for %d seconds\n", GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60);
+            ESP_LOGI("PERF", "begin automatic light sleep for %d seconds\n", REPORTING_FREQUENCY_IN_MINUTES * 60);
 
             enable_power_save_mode(true);
 
@@ -500,7 +466,7 @@ void goto_sleep()
             // rather we delay for the required time
             // and power management seeing the delay kicks in automatic light sleep
             const uint64_t convert_from_microseconds_to_milliseconds_by_division = 1000;
-            vTaskDelay(((GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60 * 1000000) - cycle_time) / convert_from_microseconds_to_milliseconds_by_division / portTICK_PERIOD_MS);
+            vTaskDelay(((REPORTING_FREQUENCY_IN_MINUTES * 60 * 1000000) - cycle_time) / convert_from_microseconds_to_milliseconds_by_division / portTICK_PERIOD_MS);
 
             enable_power_save_mode(false);
         }
@@ -508,11 +474,11 @@ void goto_sleep()
             ESP_LOGI("PERF", "skipping automatic light sleep (already running late for the next cycle)");
     }
 
-    else if (light_sleep_enabled && (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 2))
+    else if (light_sleep_enabled && (USE_AUTOMATIC_SLEEP_APPROACH == 2))
     // manual light sleep approach
     {
 
-        if (cycle_time < ((GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000))
+        if (cycle_time < ((REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000))
         {
             going_to_sleep = true;
 
@@ -521,11 +487,11 @@ void goto_sleep()
             while (WiFi_is_connected)
                 vTaskDelay(20 / portTICK_PERIOD_MS);
 
-            ESP_LOGI("PERF", "begin manual light sleep for %d seconds\n", GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60);
+            ESP_LOGI("PERF", "begin manual light sleep for %d seconds\n", REPORTING_FREQUENCY_IN_MINUTES * 60);
 
             vTaskDelay(20 / portTICK_PERIOD_MS); // provide some time to finalize writing to the log (this is not optional if you want to see the above log entry written)
 
-            sleep_time = ((GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000) - cycle_time;
+            sleep_time = ((REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000) - cycle_time;
             esp_sleep_enable_timer_wakeup(sleep_time);
 
             esp_light_sleep_start();
@@ -546,17 +512,17 @@ void goto_sleep()
         // esp_wifi_stop();
         // esp_wifi_deinit();
 
-        if (cycle_time < ((GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000))
+        if (cycle_time < ((REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000))
         {
 
-            if (GENERAL_USER_SETTINGS_USE_AUTOMATIC_SLEEP_APPROACH == 0)
-                ESP_LOGI("PERF", "begin deep sleep for %d seconds\n", (GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60)); // show as info as using deep sleep was the user's choice
+            if (USE_AUTOMATIC_SLEEP_APPROACH == 0)
+                ESP_LOGI("PERF", "begin deep sleep for %d seconds\n", (REPORTING_FREQUENCY_IN_MINUTES * 60)); // show as info as using deep sleep was the user's choice
             else
-                ESP_LOGW("PERF", "begin deep sleep for %d seconds\n", (GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60)); // show as warning as using deep sleep was not the user's choice
+                ESP_LOGW("PERF", "begin deep sleep for %d seconds\n", (REPORTING_FREQUENCY_IN_MINUTES * 60)); // show as warning as using deep sleep was not the user's choice
 
             vTaskDelay(20 / portTICK_PERIOD_MS); // provide some time to finalize writing to the log (this is not optional if you want to see the above log entry written)
 
-            esp_sleep_enable_timer_wakeup(((GENERAL_USER_SETTINGS_REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000) - cycle_time);
+            esp_sleep_enable_timer_wakeup(((REPORTING_FREQUENCY_IN_MINUTES * 60) * 1000000) - cycle_time);
             esp_deep_sleep_start();
         }
         else

@@ -18,9 +18,21 @@
 #include "sdkconfig.h"
 #include "time-sync.h"
 
+// MQTT Publishing:
+#define MQTT_BROKER_URL CONFIG_MQTT_BROKER_URL  
+#define MQTT_BROKER_PORT CONFIG_MQTT_BROKER_PORT 
+#define MQTT_QOS 2 
+#define MQTT_RETAIN 3 
+#define MQTT_MAIN_TOPIC CONFIG_MQTT_TOPIC
+#define MQTT_SUB_TOPIC CONFIG_MQTT_SUB
 
-#include "general_user_settings.h"
+#define MQTT_USER CONFIG_MQTT_USER
+#define MQTT_PASS CONFIG_MQTT_PASSWORD
 
+#define REPORTING_FREQUENCY_IN_MINUTES 1
+
+// time out period (in seconds) to complete the MQTT publishing
+#define MQTT_PUBLISHING_TIMEOUT_PERIOD 30 
 
 void MQTT_publish_a_reading(const char *subtopic, float value);
 void MQTT_publish_all_readings();

@@ -22,6 +22,7 @@ static void initialize_power_management();
 static void wait(int seconds);
 
 
+
 /* Variable holding number of times ESP32 restarted since first boot.
  * It is placed into RTC memory using RTC_DATA_ATTR and
  * maintains its value when ESP32 wakes from deep sleep.
@@ -30,6 +31,16 @@ RTC_DATA_ATTR static int boot_count = 0;
 
 
 
+// BME680 sensor:
+
+// Pin used to power up and down the BME680 sensor
+#define POWER_SENSOR_CONTROLLER_PIN GPIO_NUM_20
+
+// I2C address of the BME680 sensor
+#define BME680_I2C_ADDR 0x77
+#define PORT 0
+#define I2C_SDA 21
+#define I2C_SCL 22
 
 // BME680 sensor
 #define HTTP_RESPONSE_BUFFER_SIZE 1024

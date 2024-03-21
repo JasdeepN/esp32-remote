@@ -48,18 +48,6 @@ menu "APPLICATION ENVIRONMENT"
         default "xxxxxxxxxxx"
         help
             WiFi password (WPA or WPA2) for the application to use.
-    
-    config MQTT_USER
-        string "MQTT Authorized User ID"
-        default "xxxxxxxxxxx"
-        help
-            User ID for MQTT connection.
-    
-    config MQTT_PASSWORD
-        string "MQTT passwrord for MQTT_USER"
-        default "xxxxxxxxxxx"
-        help
-            Password for MQTT_USER.
 
     config LED_INTENSITY
         int "LED brightness in %"

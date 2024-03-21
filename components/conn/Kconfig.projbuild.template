@@ -1,0 +1,71 @@
+menu "MQTT SETTINGS"
+    # VERIFY THESE VALUES THEN SAVE AS 'Kconfig.projbuild' 
+    # RUN 'menuconfig' to verify values set 
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+   
+    config MQTT_BROKER_URL
+        string "URL MQTT broker instnace"
+        default "mqtt://<MQTT HOST>"
+        help
+            mqtt broker url, must be in format "mqtt://yourURL"
+
+    config MQTT_BROKER_PORT
+        int "Port for the above MQTT broker instnace"
+        default 1883
+        help
+            mqtt broker port, part of the url format for "mqtt://yourURL:PORT"
+    
+    
+    choice MQTT_MAIN
+        prompt "Selects MQTT_TOPIC for main subscription"
+        default MQTT_TOPIC_TEST 
+        help
+            Sets the main subscription channel for MQTT.
+        
+        config MQTT_TEST_TOPIC
+            bool "MQTT_TEST_TOPIC"
+        config MQTT_ENV_TOPIC
+            bool "MQTT_ENV_TOPIC"
+        config MQTT_SOIL_TOPIC
+            bool "MQTT_SOIL_TOPIC"
+        
+    endchoice
+    
+    config MQTT_TOPIC
+        string "Selected MQTT main topic"
+        default "test" if MQTT_TEST_TOPIC
+        default "env-topic" if MQTT_ENV_TOPIC
+        default "soil-topic" if MQTT_SOIL_TOPIC
+        help
+            the topic is set by setting the MQTT_MAIN config setting in menuconfig.
+    
+    # TODO: update the sub routes after creating them...
+    choice MQTT_SUB
+        prompt "Each esp32 should have its own sub topics"
+        default MQTT_SUB_TOPIC_TEST
+        help
+            The main subscription channel for MQTT subscription.
+
+        config MQTT_SUB_TOPIC_TEST
+            bool "1"
+        config MQTT_SUB_TOPIC_ENV_SENSOR
+            bool "2"
+        config MQTT_SUB_TOPIC_SOIL_SENSOR
+            bool "3"
+    endchoice
+           
+    config MQTT_USER
+        string "MQTT Authorized User ID"
+        default "xxxxxxxxxxxxx"
+        help
+            User ID for MQTT connection.
+    
+    config MQTT_PASSWORD
+        string "MQTT passwrord for MQTT_USER"
+        default "xxxxxxxxxxxxx"
+        help
+            Password for MQTT_USER.
+
+
+endmenu
