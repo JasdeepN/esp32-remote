@@ -1,8 +1,11 @@
-/*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+/* Iperf Example - iperf declaration
+
+   This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+   Unless required by applicable law or agreed to in writing, this
+   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+   CONDITIONS OF ANY KIND, either express or implied.
+*/
 
 #ifndef __IPERF_H_
 #define __IPERF_H_
@@ -33,17 +36,16 @@ extern "C" {
 #define IPERF_DEFAULT_NO_BW_LIMIT -1
 
 #define IPERF_TRAFFIC_TASK_NAME "iperf_traffic"
-#define IPERF_TRAFFIC_TASK_PRIORITY CONFIG_IPERF_TRAFFIC_TASK_PRIORITY
+#define IPERF_TRAFFIC_TASK_PRIORITY 4
 #define IPERF_TRAFFIC_TASK_STACK 4096
 #define IPERF_REPORT_TASK_NAME "iperf_report"
-#define IPERF_REPORT_TASK_PRIORITY CONFIG_IPERF_REPORT_TASK_PRIORITY
+#define IPERF_REPORT_TASK_PRIORITY 6
 #define IPERF_REPORT_TASK_STACK 4096
 
-#define IPERF_DEFAULT_IPV4_UDP_TX_LEN   (1470)
-#define IPERF_DEFAULT_IPV6_UDP_TX_LEN   (1450)
-#define IPERF_DEFAULT_UDP_RX_LEN        (16 << 10)
-#define IPERF_DEFAULT_TCP_TX_LEN        (16 << 10)
-#define IPERF_DEFAULT_TCP_RX_LEN        (16 << 10)
+#define IPERF_UDP_TX_LEN (1470)
+#define IPERF_UDP_RX_LEN (16 << 10)
+#define IPERF_TCP_TX_LEN (16 << 10)
+#define IPERF_TCP_RX_LEN (16 << 10)
 
 #define IPERF_MAX_DELAY 64
 

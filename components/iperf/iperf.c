@@ -1,8 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 /* Iperf Example - iperf implementation
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
@@ -12,7 +7,6 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-#include "sdkconfig.h"
 #include <stdio.h>
 #include <string.h>
 #include <sys/param.h>
@@ -94,14 +88,14 @@ static void iperf_report_task(void *arg)
         vTaskDelay(delay_interval);
         actual_bandwidth = (s_iperf_ctrl.actual_len / coefficient[format] * 8) / interval;
         printf("%4" PRIi32 "-%4" PRIi32 " sec       %.2f %cbits/sec\n", cur, cur + interval,
-               actual_bandwidth, unit[format]);
+            actual_bandwidth, unit[format]);
         cur += interval;
         average = ((average * (k - 1) / k) + (actual_bandwidth / k));
         k++;
         s_iperf_ctrl.actual_len = 0;
         if (cur >= time) {
             printf("%4d-%4" PRIu32 " sec       %.2f %cbits/sec\n", 0, time,
-                   average, unit[format]);
+                average, unit[format]);
             break;
         }
     }
@@ -114,7 +108,7 @@ static esp_err_t iperf_start_report(void)
 {
     int ret;
 
-    ret = xTaskCreatePinnedToCore(iperf_report_task, IPERF_REPORT_TASK_NAME, IPERF_REPORT_TASK_STACK, NULL, IPERF_REPORT_TASK_PRIORITY, NULL, CONFIG_FREERTOS_UNICORE);
+    ret = xTaskCreatePinnedToCore(iperf_report_task, IPERF_REPORT_TASK_NAME, IPERF_REPORT_TASK_STACK, NULL, IPERF_REPORT_TASK_PRIORITY, NULL, portNUM_PROCESSORS - 1);
 
     if (ret != pdPASS) {
         ESP_LOGE(TAG, "create task %s failed", IPERF_REPORT_TASK_NAME);
@@ -124,7 +118,7 @@ static esp_err_t iperf_start_report(void)
     return ESP_OK;
 }
 
-static void IRAM_ATTR socket_recv(int recv_socket, struct sockaddr_storage listen_addr, uint8_t type)
+static void socket_recv(int recv_socket, struct sockaddr_storage listen_addr, uint8_t type)
 {
     bool iperf_recv_start = true;
     uint8_t *buffer;
@@ -155,11 +149,11 @@ static void IRAM_ATTR socket_recv(int recv_socket, struct sockaddr_storage liste
     }
 }
 
-static void IRAM_ATTR socket_send(int send_socket, struct sockaddr_storage dest_addr, uint8_t type, int bw_lim)
+static void socket_send(int send_socket, struct sockaddr_storage dest_addr, uint8_t type, int bw_lim)
 {
     uint8_t *buffer;
-    uint32_t *pkt_id_p;
-    uint32_t pkt_cnt = 0;
+    int32_t *pkt_id_p;
+    int32_t pkt_cnt = 0;
     int actual_send = 0;
     int want_send = 0;
     int period_us = -1;
@@ -175,7 +169,7 @@ static void IRAM_ATTR socket_send(int send_socket, struct sockaddr_storage dest_
     const char *error_log = (type == IPERF_TRANS_TYPE_TCP) ? "tcp client send" : "udp client send";
 
     buffer = s_iperf_ctrl.buffer;
-    pkt_id_p = (uint32_t *)s_iperf_ctrl.buffer;
+    pkt_id_p = (int32_t *)s_iperf_ctrl.buffer;
     want_send = s_iperf_ctrl.buffer_len;
     iperf_start_report();
 
@@ -186,7 +180,7 @@ static void IRAM_ATTR socket_send(int send_socket, struct sockaddr_storage dest_
     while (!s_iperf_ctrl.finish) {
         if (period_us > 0) {
             send_time = esp_timer_get_time();
-            if (actual_send > 0) {
+            if (actual_send > 0){
                 // Last packet "send" was successful, check how much off the previous loop duration was to the ideal send period. Result will adjust the
                 // next send delay.
                 delay_us += period_us + (int32_t)(prev_time - send_time);
@@ -199,7 +193,13 @@ static void IRAM_ATTR socket_send(int send_socket, struct sockaddr_storage dest_
             }
             prev_time = send_time;
         }
-        *pkt_id_p = htonl(pkt_cnt++); // datagrams need to be sequentially numbered
+        *pkt_id_p = htonl(pkt_cnt); // datagrams need to be sequentially numbered
+        if (pkt_cnt >= INT32_MAX) {
+            pkt_cnt = 0;
+        }
+        else {
+            pkt_cnt++;
+        }
         actual_send = sendto(send_socket, buffer, want_send, 0, (struct sockaddr *)&dest_addr, socklen);
         if (actual_send != want_send) {
             if (type == IPERF_TRANS_TYPE_UDP) {
@@ -222,7 +222,7 @@ static void IRAM_ATTR socket_send(int send_socket, struct sockaddr_storage dest_
     }
 }
 
-static esp_err_t iperf_run_tcp_server(void)
+static esp_err_t IRAM_ATTR iperf_run_tcp_server(void)
 {
     int listen_socket = -1;
     int client_socket = -1;
@@ -264,31 +264,31 @@ static esp_err_t iperf_run_tcp_server(void)
         memcpy(&listen_addr, &listen_addr6, sizeof(listen_addr6));
     } else
 #endif
-        if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV4) {
-            listen_addr4.sin_family = AF_INET;
-            listen_addr4.sin_port = htons(s_iperf_ctrl.cfg.sport);
-            listen_addr4.sin_addr.s_addr = s_iperf_ctrl.cfg.source_ip4;
+    if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV4) {
+        listen_addr4.sin_family = AF_INET;
+        listen_addr4.sin_port = htons(s_iperf_ctrl.cfg.sport);
+        listen_addr4.sin_addr.s_addr = s_iperf_ctrl.cfg.source_ip4;
 
-            listen_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            ESP_GOTO_ON_FALSE((listen_socket >= 0), ESP_FAIL, exit, TAG, "Unable to create socket: errno %d", errno);
+        listen_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        ESP_GOTO_ON_FALSE((listen_socket >= 0), ESP_FAIL, exit, TAG, "Unable to create socket: errno %d", errno);
 
-            setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-            ESP_LOGI(TAG, "Socket created");
+        ESP_LOGI(TAG, "Socket created");
 
-            err = bind(listen_socket, (struct sockaddr *)&listen_addr4, sizeof(listen_addr4));
-            ESP_GOTO_ON_FALSE((err == 0), ESP_FAIL, exit, TAG, "Socket unable to bind: errno %d, IPPROTO: %d", errno, AF_INET);
+        err = bind(listen_socket, (struct sockaddr *)&listen_addr4, sizeof(listen_addr4));
+        ESP_GOTO_ON_FALSE((err == 0), ESP_FAIL, exit, TAG, "Socket unable to bind: errno %d, IPPROTO: %d", errno, AF_INET);
 
-            err = listen(listen_socket, 5);
-            ESP_GOTO_ON_FALSE((err == 0), ESP_FAIL, exit, TAG, "Error occurred during listen: errno %d", errno);
-            memcpy(&listen_addr, &listen_addr4, sizeof(listen_addr4));
-        }
+        err = listen(listen_socket, 5);
+        ESP_GOTO_ON_FALSE((err == 0), ESP_FAIL, exit, TAG, "Error occurred during listen: errno %d", errno);
+        memcpy(&listen_addr, &listen_addr4, sizeof(listen_addr4));
+    }
 
     timeout.tv_sec = IPERF_SOCKET_RX_TIMEOUT;
     setsockopt(listen_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     client_socket = accept(listen_socket, (struct sockaddr *)&remote_addr, &addr_len);
     ESP_GOTO_ON_FALSE((client_socket >= 0), ESP_FAIL, exit, TAG, "Unable to accept connection: errno %d", errno);
-    ESP_LOGI(TAG, "accept: %s,%d", inet_ntoa(remote_addr.sin_addr), htons(remote_addr.sin_port));
+    ESP_LOGI(TAG, "accept: %s,%d\n", inet_ntoa(remote_addr.sin_addr), htons(remote_addr.sin_port));
 
     timeout.tv_sec = IPERF_SOCKET_RX_TIMEOUT;
     setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
@@ -350,18 +350,18 @@ static esp_err_t iperf_run_tcp_client(void)
         memcpy(&dest_addr, &dest_addr6, sizeof(dest_addr6));
     } else
 #endif
-        if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV4) {
-            client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            ESP_GOTO_ON_FALSE((client_socket >= 0), ESP_FAIL, exit, TAG, "Unable to create socket: errno %d", errno);
+    if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV4) {
+        client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        ESP_GOTO_ON_FALSE((client_socket >= 0), ESP_FAIL, exit, TAG, "Unable to create socket: errno %d", errno);
 
-            dest_addr4.sin_family = AF_INET;
-            dest_addr4.sin_port = htons(s_iperf_ctrl.cfg.dport);
-            dest_addr4.sin_addr.s_addr = s_iperf_ctrl.cfg.destination_ip4;
-            err = connect(client_socket, (struct sockaddr *)&dest_addr4, sizeof(struct sockaddr_in));
-            ESP_GOTO_ON_FALSE((err == 0), ESP_FAIL, exit, TAG, "Socket unable to connect: errno %d", errno);
-            ESP_LOGI(TAG, "Successfully connected");
-            memcpy(&dest_addr, &dest_addr4, sizeof(dest_addr4));
-        }
+        dest_addr4.sin_family = AF_INET;
+        dest_addr4.sin_port = htons(s_iperf_ctrl.cfg.dport);
+        dest_addr4.sin_addr.s_addr = s_iperf_ctrl.cfg.destination_ip4;
+        err = connect(client_socket, (struct sockaddr *)&dest_addr4, sizeof(struct sockaddr_in));
+        ESP_GOTO_ON_FALSE((err == 0), ESP_FAIL, exit, TAG, "Socket unable to connect: errno %d", errno);
+        ESP_LOGI(TAG, "Successfully connected");
+        memcpy(&dest_addr, &dest_addr4, sizeof(dest_addr4));
+    }
     timeout.tv_sec = IPERF_SOCKET_TCP_TX_TIMEOUT;
     setsockopt(client_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
@@ -389,7 +389,7 @@ exit:
     return ret;
 }
 
-static esp_err_t iperf_run_udp_server(void)
+static esp_err_t IRAM_ATTR iperf_run_udp_server(void)
 {
     int listen_socket = -1;
     int opt = 1;
@@ -424,22 +424,22 @@ static esp_err_t iperf_run_udp_server(void)
         memcpy(&listen_addr, &listen_addr6, sizeof(listen_addr6));
     } else
 #endif
-        if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV4) {
-            listen_addr4.sin_family = AF_INET;
-            listen_addr4.sin_port = htons(s_iperf_ctrl.cfg.sport);
-            listen_addr4.sin_addr.s_addr = s_iperf_ctrl.cfg.source_ip4;
+    if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV4) {
+        listen_addr4.sin_family = AF_INET;
+        listen_addr4.sin_port = htons(s_iperf_ctrl.cfg.sport);
+        listen_addr4.sin_addr.s_addr = s_iperf_ctrl.cfg.source_ip4;
 
-            listen_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-            ESP_GOTO_ON_FALSE((listen_socket >= 0), ESP_FAIL, exit, TAG, "Unable to create socket: errno %d", errno);
-            ESP_LOGI(TAG, "Socket created");
+        listen_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        ESP_GOTO_ON_FALSE((listen_socket >= 0), ESP_FAIL, exit, TAG, "Unable to create socket: errno %d", errno);
+        ESP_LOGI(TAG, "Socket created");
 
-            setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-            err = bind(listen_socket, (struct sockaddr *)&listen_addr4, sizeof(struct sockaddr_in));
-            ESP_GOTO_ON_FALSE((err == 0), ESP_FAIL, exit, TAG, "Socket unable to bind: errno %d", errno);
-            ESP_LOGI(TAG, "Socket bound, port %d", listen_addr4.sin_port);
-            memcpy(&listen_addr, &listen_addr4, sizeof(listen_addr4));
-        }
+        err = bind(listen_socket, (struct sockaddr *)&listen_addr4, sizeof(struct sockaddr_in));
+        ESP_GOTO_ON_FALSE((err == 0), ESP_FAIL, exit, TAG, "Socket unable to bind: errno %d", errno);
+        ESP_LOGI(TAG, "Socket bound, port %d", listen_addr4.sin_port);
+        memcpy(&listen_addr, &listen_addr4, sizeof(listen_addr4));
+    }
 
     timeout.tv_sec = IPERF_SOCKET_RX_TIMEOUT;
     setsockopt(listen_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
@@ -487,23 +487,23 @@ static esp_err_t iperf_run_udp_client(void)
         memcpy(&dest_addr, &dest_addr6, sizeof(dest_addr6));
     } else
 #endif
-        if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV4) {
-            dest_addr4.sin_family = AF_INET;
-            dest_addr4.sin_port = htons(s_iperf_ctrl.cfg.dport);
-            dest_addr4.sin_addr.s_addr = s_iperf_ctrl.cfg.destination_ip4;
+    if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV4) {
+        dest_addr4.sin_family = AF_INET;
+        dest_addr4.sin_port = htons(s_iperf_ctrl.cfg.dport);
+        dest_addr4.sin_addr.s_addr = s_iperf_ctrl.cfg.destination_ip4;
 
-            client_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-            ESP_GOTO_ON_FALSE((client_socket >= 0), ESP_FAIL, exit, TAG, "Unable to create socket: errno %d", errno);
-            ESP_LOGI(TAG, "Socket created, sending to %d.%d.%d.%d:%" PRIu16,
-                     (uint16_t) s_iperf_ctrl.cfg.destination_ip4 & 0xFF,
-                     (uint16_t) (s_iperf_ctrl.cfg.destination_ip4 >> 8) & 0xFF,
-                     (uint16_t) (s_iperf_ctrl.cfg.destination_ip4 >> 16) & 0xFF,
-                     (uint16_t) (s_iperf_ctrl.cfg.destination_ip4 >> 24) & 0xFF,
-                     s_iperf_ctrl.cfg.dport);
+        client_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        ESP_GOTO_ON_FALSE((client_socket >= 0), ESP_FAIL, exit, TAG, "Unable to create socket: errno %d", errno);
+        ESP_LOGI(TAG, "Socket created, sending to %d.%d.%d.%d:%" PRIu16,
+            (uint16_t) s_iperf_ctrl.cfg.destination_ip4 & 0xFF,
+            (uint16_t) (s_iperf_ctrl.cfg.destination_ip4 >> 8) & 0xFF,
+            (uint16_t) (s_iperf_ctrl.cfg.destination_ip4 >> 16) & 0xFF,
+            (uint16_t) (s_iperf_ctrl.cfg.destination_ip4 >> 24) & 0xFF,
+            s_iperf_ctrl.cfg.dport);
 
-            setsockopt(client_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-            memcpy(&dest_addr, &dest_addr4, sizeof(dest_addr4));
-        }
+        setsockopt(client_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        memcpy(&dest_addr, &dest_addr4, sizeof(dest_addr4));
+    }
 #if CONFIG_ESP_WIFI_ENABLE_WIFI_TX_STATS
     wifi_cmd_clr_tx_statistics(0, NULL);
 #endif
@@ -545,23 +545,13 @@ static void iperf_task_traffic(void *arg)
 static uint32_t iperf_get_buffer_len(void)
 {
     if (iperf_is_udp_client()) {
-#ifdef CONFIG_LWIP_IPV6
-        if (s_iperf_ctrl.cfg.len_send_buf) {
-            return s_iperf_ctrl.cfg.len_send_buf;
-        } else if (s_iperf_ctrl.cfg.type == IPERF_IP_TYPE_IPV6) {
-            return IPERF_DEFAULT_IPV6_UDP_TX_LEN;
-        } else {
-            return IPERF_DEFAULT_IPV4_UDP_TX_LEN;
-        }
-#else
-        return (s_iperf_ctrl.cfg.len_send_buf == 0 ? IPERF_DEFAULT_IPV4_UDP_TX_LEN : s_iperf_ctrl.cfg.len_send_buf);
-#endif
+        return (s_iperf_ctrl.cfg.len_send_buf == 0 ? IPERF_UDP_TX_LEN : s_iperf_ctrl.cfg.len_send_buf);
     } else if (iperf_is_udp_server()) {
-        return IPERF_DEFAULT_UDP_RX_LEN;
+        return IPERF_UDP_RX_LEN;
     } else if (iperf_is_tcp_client()) {
-        return (s_iperf_ctrl.cfg.len_send_buf == 0 ? IPERF_DEFAULT_TCP_TX_LEN : s_iperf_ctrl.cfg.len_send_buf);
+        return (s_iperf_ctrl.cfg.len_send_buf == 0 ? IPERF_TCP_TX_LEN : s_iperf_ctrl.cfg.len_send_buf);
     } else {
-        return IPERF_DEFAULT_TCP_RX_LEN;
+        return IPERF_TCP_RX_LEN;
     }
     return 0;
 }
@@ -590,7 +580,7 @@ esp_err_t iperf_start(iperf_cfg_t *cfg)
         return ESP_FAIL;
     }
     memset(s_iperf_ctrl.buffer, 0, s_iperf_ctrl.buffer_len);
-    ret = xTaskCreatePinnedToCore(iperf_task_traffic, IPERF_TRAFFIC_TASK_NAME, IPERF_TRAFFIC_TASK_STACK, NULL, IPERF_TRAFFIC_TASK_PRIORITY, NULL, CONFIG_FREERTOS_UNICORE);
+    ret = xTaskCreatePinnedToCore(iperf_task_traffic, IPERF_TRAFFIC_TASK_NAME, IPERF_TRAFFIC_TASK_STACK, NULL, IPERF_TRAFFIC_TASK_PRIORITY, NULL, portNUM_PROCESSORS - 1);
     if (ret != pdPASS) {
         ESP_LOGE(TAG, "create task %s failed", IPERF_TRAFFIC_TASK_NAME);
         free(s_iperf_ctrl.buffer);
